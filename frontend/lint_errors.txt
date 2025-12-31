@@ -1,0 +1,30 @@
+
+/home/rahan/Testing/Apps/kanban-app/frontend/src/pages/dashboard/DashboardPage.tsx
+   11:86   error  'DialogTrigger' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+  124:112  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/rahan/Testing/Apps/kanban-app/frontend/src/pages/dashboard/DashboardPage.tsx:124:112
+  122 |     {
+  123 |       label: "Due Soon",
+> 124 |       value: tasks.filter(t => t.dueDate && new Date(t.dueDate) > new Date() && new Date(t.dueDate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)).length,
+      |                                                                                                                ^^^^^^^^^^ Cannot call impure function
+  125 |       icon: AlertCircle,
+  126 |       color: "text-orange-500",
+  127 |       bg: "bg-orange-500/10",  react-hooks/purity
+  172:33   error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/rahan/Testing/Apps/kanban-app/frontend/src/pages/dashboard/DashboardPage.tsx:172:33
+  170 |
+  171 |   const formatTime = (timestamp: number) => {
+> 172 |     const minutes = Math.floor((Date.now() - timestamp) / 60000);
+      |                                 ^^^^^^^^^^ Cannot call impure function
+  173 |     if (minutes < 1) return 'Just now';
+  174 |     if (minutes < 60) return `${minutes}m ago`;
+  175 |     const hours = Math.floor(minutes / 60);                                                                                                                  react-hooks/purity
+
+✖ 3 problems (3 errors, 0 warnings)
+
