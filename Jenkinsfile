@@ -29,10 +29,10 @@ spec:
         DOCKER_CREDS      = 'docker-hub'
         GIT_CREDS         = 'git-token'
         MANIFEST_REPO_URL = 'https://github.com/DevopsNaratel/deployment-manifests.git'
-        MANIFEST_DEV_PATH_FE  = "${APP_NAME}-frontend/dev/frontend-deployment.yaml"
-        MANIFEST_DEV_PATH_BE  = "${APP_NAME}-backend/dev/backend-deployment.yaml"
-        MANIFEST_PROD_PATH_FE = "${APP_NAME}-frontend/prod/frontend-deployment.yaml"
-        MANIFEST_PROD_PATH_BE = "${APP_NAME}-backend/prod/backend-deployment.yaml"
+        MANIFEST_DEV_PATH_FE  = "${APP_NAME}-frontend/dev/deployment.yaml"
+        MANIFEST_DEV_PATH_BE  = "${APP_NAME}-backend/dev/deployment.yaml"
+        MANIFEST_PROD_PATH_FE = "${APP_NAME}-frontend/prod/deployment.yaml"
+        MANIFEST_PROD_PATH_BE = "${APP_NAME}-backend/prod/deployment.yaml"
     }
 
     stages {
