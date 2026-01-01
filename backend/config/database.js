@@ -2,11 +2,11 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const pool = new Pool({
-    host: process.env.DB_HOST || 'localhost',
+    host: process.env.DB_HOST || 'postgres-service.database-test.svc.cluster.local',
     port: process.env.DB_PORT || 5432,
     database: process.env.DB_NAME || 'kanban_db',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'database',
+    user: process.env.DB_USER || 'adminuser',
+    password: process.env.DB_PASSWORD || 'Rahasia123',
     min: parseInt(process.env.DB_POOL_MIN) || 2,
     max: parseInt(process.env.DB_POOL_MAX) || 10,
 });
