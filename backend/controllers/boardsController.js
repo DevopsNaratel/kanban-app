@@ -1,5 +1,5 @@
 const db = require('../config/database');
-const { generateId, getCurrentTimestamp, validateRequiredFields, createError, toCamelCaseKeys } = require('../utils/helpers');
+const { generateId, getCurrentTimestamp, validateRequiredFields, createError, toCamelCaseKeys, toSnakeCase } = require('../utils/helpers');
 
 // Get all boards for the authenticated user
 const getAllBoards = async (req, res, next) => {
@@ -97,11 +97,12 @@ const updateBoard = async (req, res, next) => {
         let paramCount = 1;
 
         // Always update last_updated
-        updates.last_updated = getCurrentTimestamp();
+        updates.lastUpdated = getCurrentTimestamp();
 
         for (const [key, value] of Object.entries(updates)) {
-            if (key !== 'id' && key !== 'user_id') { // Prevent updating user_id or id
-                fields.push(`${key} = $${paramCount}`);
+            const snakeKey = toSnakeCase(key);
+            if (snakeKey !== 'id' && snakeKey !== 'user_id') { // Prevent updating user_id or id
+                fields.push(`${snakeKey} = $${paramCount}`);
                 values.push(value);
                 paramCount++;
             }

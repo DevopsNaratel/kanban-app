@@ -7,6 +7,7 @@ const authRouter = require('./routes/auth');
 const boardsRouter = require('./routes/boards');
 const columnsRouter = require('./routes/columns');
 const tasksRouter = require('./routes/tasks');
+const logger = require('./utils/logger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,7 +22,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Request logging
 app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    logger.info(`${req.method} ${req.path}`);
     next();
 });
 
@@ -38,7 +39,7 @@ app.get('/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    console.error('Error:', err);
+    logger.error('Error:', err);
     res.status(err.status || 500).json({
         error: err.message || 'Internal server error'
     });
@@ -46,14 +47,15 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use((req, res) => {
+    logger.warn(`404 - Not Found - ${req.method} ${req.path}`);
     res.status(404).json({ error: 'Route not found' });
 });
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📡 API available at http://localhost:${PORT}/api`);
-    console.log(`🏥 Health check at http://localhost:${PORT}/health`);
+    logger.info(`🚀 Server running on http://localhost:${PORT}`);
+    logger.info(`📡 API available at http://localhost:${PORT}/api`);
+    logger.info(`🏥 Health check at http://localhost:${PORT}/health`);
 });
 
 module.exports = app;

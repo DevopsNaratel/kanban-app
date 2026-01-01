@@ -1,699 +1,569 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { Board } from "@/types/kanban";
 import { useKanban } from "@/context/KanbanContext";
 import { useAuth } from "@/context/AuthContext";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Bell, Plus, Search, Layers, Grid3x3, List, MoreVertical,
-  CheckCircle, AlertCircle,
-  FolderOpen, CheckSquare, Star, User, Settings, LogOut, X, ChevronRight,
-  Trash2, Edit2
+  Plus,
+  Target,
+  Calendar,
+  CheckCircle2,
+  Star,
+  Flame,
+  ArrowRight,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  LogOut,
+  LayoutGrid,
+  List,
+  CalendarClock
 } from "lucide-react";
 
 export default function DashboardPage() {
-  const [activeView, setActiveView] = useState<"grid" | "list">("grid");
-  const [searchQuery, setSearchQuery] = useState("");
+
   const [showCreateBoard, setShowCreateBoard] = useState(false);
+  const [editingBoard, setEditingBoard] = useState<Board | null>(null);
   const [newBoardTitle, setNewBoardTitle] = useState("");
   const [newBoardDesc, setNewBoardDesc] = useState("");
-  const [editingBoard, setEditingBoard] = useState<{ id: string, title: string, description: string } | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  const [taskFilter, setTaskFilter] = useState<"all" | "due_soon" | "overdue" | "today">("all");
-
-  // Memoize 'now' to avoid impure render warnings
-  const now = useMemo(() => new Date(), []);
-
-  const {
-    boards, tasks, columns, getBoardTasks, getBoardColumns,
-    addBoard, toggleBoardStar, updateBoard, deleteBoard, moveTask
-  } = useKanban();
-
+  const { boards, tasks, columns, addBoard, updateBoard, deleteBoard, getBoardTasks, updateTask, moveTask } = useKanban();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
-  const totalTasks = tasks.length;
-  const activeBoards = boards.length;
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
-  const handleCreateBoard = () => {
+  const handleSaveBoard = () => {
     if (!newBoardTitle.trim()) return;
-    addBoard({
-      title: newBoardTitle,
-      description: newBoardDesc,
-      color: "bg-blue-500",
-    });
+
+    if (editingBoard) {
+      updateBoard(editingBoard.id, {
+        title: newBoardTitle,
+        description: newBoardDesc
+      });
+    } else {
+      addBoard({
+        title: newBoardTitle,
+        description: newBoardDesc,
+        color: "bg-blue-500",
+        createdAt: new Date().toISOString(),
+        progress: 0
+      });
+    }
     setShowCreateBoard(false);
     setNewBoardTitle("");
     setNewBoardDesc("");
+    setEditingBoard(null);
   };
 
-  const handleRenameBoard = () => {
-    if (!editingBoard || !editingBoard.title.trim()) return;
-    updateBoard(editingBoard.id, {
-      title: editingBoard.title,
-      description: editingBoard.description
-    });
+  const openCreateDialog = () => {
     setEditingBoard(null);
-  }
+    setNewBoardTitle("");
+    setNewBoardDesc("");
+    setShowCreateBoard(true);
+  };
 
-  const handleDeleteBoard = (boardId: string) => {
-    if (confirm("Are you sure you want to delete this board? This action cannot be undone.")) {
+  const openEditDialog = (e: React.MouseEvent, board: Board) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingBoard(board);
+    setNewBoardTitle(board.title);
+    setNewBoardDesc(board.description);
+    setShowCreateBoard(true);
+  };
+
+  const handleDeleteBoard = (e: React.MouseEvent, boardId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm("Are you sure you want to delete this board?")) {
       deleteBoard(boardId);
     }
-  }
-
-  const handleTaskCompletion = (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
-
-    const currentColumn = columns.find(c => c.id === task.columnId);
-    if (!currentColumn) return;
-
-    const boardColumns = getBoardColumns(currentColumn.boardId);
-    const doneColumn = boardColumns.find(c => ['done', 'completed', 'finished'].includes(c.title.toLowerCase()));
-
-    if (doneColumn) {
-      moveTask(taskId, doneColumn.id);
-    } else {
-      const lastColumn = boardColumns[boardColumns.length - 1];
-      if (lastColumn) {
-        moveTask(taskId, lastColumn.id);
-      }
-    }
   };
 
-  const totalCompletion = useMemo(() => {
-    if (tasks.length === 0) return 0;
-    const doneColumnIds = columns
-      .filter(c => ['done', 'completed', 'finished'].includes(c.title.toLowerCase()))
-      .map(c => c.id);
-    const doneTasks = tasks.filter(t => doneColumnIds.includes(t.columnId));
-    return Math.round((doneTasks.length / tasks.length) * 100);
-  }, [tasks, columns]);
 
-  const lastViewedBoard = useMemo(() => {
-    if (boards.length === 0) return null;
-    return [...boards].sort((a, b) => (b.lastViewed || 0) - (a.lastViewed || 0))[0];
-  }, [boards]);
 
-  const dueSoonCount = useMemo(() => {
-    return tasks.filter(t => {
-      if (!t.dueDate) return false;
+  const activeBoards = boards.filter(board => !board.completed);
+
+  // Stats Calculations
+  const totalTasks = tasks.length;
+  // Tasks due in next 7 days
+  const sevenDaysFromNow = new Date();
+  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+  const dueSoonTasks = tasks.filter(t => {
+    if (!t.dueDate) return false;
+    const d = new Date(t.dueDate);
+    return d >= new Date() && d <= sevenDaysFromNow && !t.completed;
+  });
+
+  const upcomingTasks = tasks
+    .filter(t => {
+      if (!t.dueDate || t.completed) return false;
       const column = columns.find(c => c.id === t.columnId);
-      const isDone = column && ['done', 'completed', 'finished'].includes(column.title.toLowerCase());
-      if (isDone) return false;
-      return new Date(t.dueDate) > now && new Date(t.dueDate) < new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
-    }).length;
-  }, [tasks, columns, now]);
+      if (column && column.title.toLowerCase() === 'done') return false;
+      return true;
+    })
+    .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
+    .slice(0, 7); // Take top 7
 
-  const stats = [
-    {
-      label: "Total Tasks",
-      value: totalTasks,
-      icon: CheckSquare,
-      color: "text-primary",
-      bg: "bg-primary/10",
-      action: () => setTaskFilter("all")
-    },
-    {
-      label: "Active Boards",
-      value: activeBoards,
-      icon: FolderOpen,
-      color: "text-purple-500",
-      bg: "bg-purple-500/10",
-      action: () => document.getElementById("boards-section")?.scrollIntoView({ behavior: "smooth" })
-    },
-    {
-      label: "Due Soon",
-      value: dueSoonCount,
-      icon: AlertCircle,
-      color: "text-orange-500",
-      bg: "bg-orange-500/10",
-      action: () => setTaskFilter("due_soon")
-    },
-    {
-      label: "Completion",
-      value: `${totalCompletion}%`,
-      icon: CheckCircle,
-      color: "text-green-500",
-      bg: "bg-green-500/10",
-      action: () => { }
-    }
-  ];
 
-  const getBoardProgress = (boardId: string) => {
-    const boardTasks = getBoardTasks(boardId);
-    const boardColumns = getBoardColumns(boardId);
-    if (boardTasks.length === 0) return 0;
 
-    const doneColumnIds = boardColumns
-      .filter(c => ['done', 'completed', 'finished'].includes(c.title.toLowerCase()))
-      .map(c => c.id);
 
-    if (doneColumnIds.length === 0) return 0;
 
-    const doneTasks = boardTasks.filter(t => doneColumnIds.includes(t.columnId));
-    return Math.round((doneTasks.length / boardTasks.length) * 100);
-  };
+  // Filter boards based on active tab
 
-  const filteredBoards = boards.filter(b =>
-    b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    b.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
-  const getFilteredBoardsByTab = (tab: string) => {
-    switch (tab) {
-      case "recent":
-        return [...filteredBoards].sort((a, b) => (b.lastViewed || 0) - (a.lastViewed || 0)).slice(0, 5);
-      case "starred":
-        return filteredBoards.filter(b => b.isStarred);
-      default:
-        return filteredBoards;
-    }
-  };
 
-  const formatTime = (timestamp: number) => {
-    const minutes = Math.floor((now.getTime() - timestamp) / 60000);
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
-  };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Layers className="h-5 w-5 text-primary" />
-              </div>
-              <span className="font-bold text-xl hidden sm:inline-block">
-                KanbanFlow
-              </span>
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 text-foreground flex font-sans antialiased">
+      {/* Sidebar Navigation */}
+      <aside className="w-64 border-r bg-sidebar/50 backdrop-blur-sm hidden md:flex flex-col sticky top-0 h-screen">
+        <div className="h-16 flex items-center px-6 border-b border-sidebar-border">
+          <div className="flex items-center gap-3 font-semibold text-sm tracking-tight text-sidebar-foreground">
+            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground shadow-sm">
+              <Flame className="h-3.5 w-3.5" />
             </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search boards or tasks..."
-                className="w-[200px] lg:w-[300px] pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500" />
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="gap-2 px-2">
-                  <Avatar className="h-8 w-8">
-                     <AvatarImage src={user?.avatarUrl} />
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {user?.name?.charAt(0) || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user?.name}</p>
-                    <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/settings")}>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/settings")}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <span>FlowFocus</span>
           </div>
         </div>
-      </header>
 
-      <main className="px-4 sm:px-6 lg:px-8 py-8 max-w-7xl mx-auto space-y-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">My Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back! Here's what's happening today.</p>
-          </div>
-          {lastViewedBoard && (
-            <Button
-              size="lg"
-              className="gap-2 shadow-lg shadow-primary/20"
-              onClick={() => navigate(`/board/${lastViewedBoard.id}`)}
-            >
-              <Layers className="h-5 w-5" />
-              Continue Working
-            </Button>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, index) => (
-            <Card
-              key={index}
-              className="hover:scale-[1.02] transition-transform cursor-pointer focus-visible:ring-2 focus-visible:ring-primary"
-              onClick={stat.action}
-              tabIndex={0}
-              role="button"
-            >
-              <CardContent className="pt-6 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">{stat.label}</p>
-                  <p className="text-3xl font-bold mt-2">{stat.value}</p>
-                </div>
-                <div className={`h-12 w-12 rounded-full ${stat.bg} flex items-center justify-center`}>
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                </div>
-              </CardContent>
-              {stat.label === "Completion" && (
-                <div className="px-6 pb-4">
-                  <Progress value={parseInt(stat.value.toString())} className="h-1.5" />
-                </div>
-              )}
-            </Card>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8" id="boards-section">
+        <div className="flex-1 p-4">
+          {/* Minimal User Profile */}
+          <div className="p-3 mb-6 flex items-center gap-3">
+            <Avatar className="h-10 w-10 rounded-lg border-2 border-background shadow">
+              <AvatarImage src={user?.avatarUrl} />
+              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-sm">
+                {user?.name?.charAt(0) || "U"}
+              </AvatarFallback>
+            </Avatar>
             <div>
-              <div className="flex justify-between items-center mb-6">
+              <p className="text-sm font-semibold truncate">{user?.name || "User"}</p>
+            </div>
+          </div>
+
+          <nav className="space-y-1">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 px-3 py-2.5 h-10 text-sm font-medium hover:bg-sidebar-accent rounded-lg transition-all"
+              onClick={() => navigate('/tasks')}
+            >
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span>Calendar</span>
+            </Button>
+          </nav>
+        </div>
+
+        <div className="p-4 border-t border-sidebar-border">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 px-3 py-2.5 h-10 text-sm font-medium hover:bg-sidebar-accent rounded-lg transition-all text-muted-foreground hover:text-destructive"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Log out</span>
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="h-16 border-b border-border bg-background/80 backdrop-blur-sm flex items-center justify-between px-6 lg:px-8 sticky top-0 z-20">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              {/* <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-sm">
+                <Trophy className="h-4 w-4 text-primary-foreground" />
+              </div> */}
+              <div>
+                <h1 className="text-lg font-semibold tracking-tight">Personal Dashboard</h1>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Content Area */}
+        <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
+          <div className="max-w-7xl mx-auto space-y-8">
+
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="p-4 border border-border/50 shadow-sm bg-card flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Total Boards</span>
+                  <Target className="h-4 w-4 text-primary" />
+                </div>
                 <div>
-                  <h2 className="text-xl font-semibold">My Boards</h2>
-                  <p className="text-sm text-muted-foreground">Recent projects you are working on</p>
+                  <div className="text-2xl font-bold">{activeBoards.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Active goals</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => setShowCreateBoard(true)}
-                  >
-                    <Plus className="h-4 w-4" />
-                    New Board
-                  </Button>
-                  <div className="h-6 w-px bg-border mx-2" />
-                  <Button
-                    variant={activeView === "grid" ? "ghost" : "ghost"}
-                    size="icon"
-                    className={activeView === "grid" ? "bg-muted" : ""}
-                    onClick={() => setActiveView("grid")}
-                  >
-                    <Grid3x3 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={activeView === "list" ? "ghost" : "ghost"}
-                    size="icon"
-                    className={activeView === "list" ? "bg-muted" : ""}
-                    onClick={() => setActiveView("list")}
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
+              </Card>
+
+              <Card className="p-4 border border-border/50 shadow-sm bg-card flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Total Tasks</span>
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
                 </div>
+                <div>
+                  <div className="text-2xl font-bold">{totalTasks}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Across all boards</p>
+                </div>
+              </Card>
+
+              <Card className="p-4 border border-border/50 shadow-sm bg-card flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Due This Week</span>
+                  <CalendarClock className="h-4 w-4 text-orange-500" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold">{dueSoonTasks.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Approaching deadlines</p>
+                </div>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+              {/* Main Column: Boards */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold tracking-tight mb-1">My Boards</h2>
+                    <p className="text-sm text-muted-foreground">Manage and track your personal goals</p>
+                  </div>
+                  <div className="flex items-center border border-border rounded-lg p-0.5 bg-muted/20">
+                    <Button
+                      variant={viewMode === "grid" ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setViewMode("grid")}
+                      className="h-7 px-2.5 text-xs gap-1.5"
+                    >
+                      <LayoutGrid className="h-3.5 w-3.5" />
+                      Grid
+                    </Button>
+                    <Button
+                      variant={viewMode === "list" ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setViewMode("list")}
+                      className="h-7 px-2.5 text-xs gap-1.5"
+                    >
+                      <List className="h-3.5 w-3.5" />
+                      List
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Boards Display */}
+                {viewMode === "grid" ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Create New Card */}
+                    <Card
+                      onClick={openCreateDialog}
+                      className="h-48 border-2 border-dashed border-border/50 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-muted/20 transition-all group hover:shadow-md"
+                    >
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-muted to-muted/50 group-hover:from-primary/10 group-hover:to-primary/5 flex items-center justify-center transition-colors mb-3">
+                        <Plus className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                      <span className="text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors">
+                        New Board
+                      </span>
+                      <p className="text-xs text-muted-foreground/70 mt-1">Add a new personal goal</p>
+                    </Card>
+
+                    {activeBoards.map(board => {
+                      const boardTasks = getBoardTasks(board.id);
+                      const totalTasks = boardTasks.length;
+                      const completedTasks = boardTasks.filter(t => t.completed).length;
+                      const progress = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+
+                      return (
+                        <Link to={`/board/${board.id}`} key={board.id} className="group block relative">
+                          <Card className="h-48 border border-border/50 shadow-sm hover:shadow-md hover:border-primary/30 transition-all rounded-xl bg-card p-5 flex flex-col justify-between group-hover:translate-y-[-2px]">
+                            <div>
+                              <div className="flex justify-between items-start mb-3">
+                                <h3 className="font-semibold text-foreground truncate pr-6">{board.title}</h3>
+                                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={(e) => openEditDialog(e, board)}>
+                                        <Pencil className="mr-2 h-4 w-4" />
+                                        Rename
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => handleDeleteBoard(e, board.id)}>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
+
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                                {board.description || "No description provided"}
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1.5">
+                                  {totalTasks} {totalTasks === 1 ? 'Task' : 'Tasks'}
+                                </span>
+                              </div>
+                              {!board.completed && (
+                                <Progress value={progress} className="h-1.5" />
+                              )}
+                              {board.completed && (
+                                <div className="flex items-center justify-center gap-1.5 text-xs text-green-600 bg-green-50 dark:bg-green-900/20 py-1 rounded">
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Completed
+                                </div>
+                              )}
+                            </div>
+                          </Card>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {activeBoards.map(board => {
+                      const boardTasks = getBoardTasks(board.id);
+                      const totalTasks = boardTasks.length;
+                      const completedTasks = boardTasks.filter(t => t.completed).length;
+                      const progress = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+
+                      return (
+                        <div key={board.id} className="group relative">
+                          <Link to={`/board/${board.id}`} className="block">
+                            <Card className="flex flex-row items-center text-left gap-4 p-4 hover:bg-muted/30 transition-all border-border/50 hover:shadow-sm">
+                              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                <Target className="h-5 w-5 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0 pr-8">
+                                <h3 className="font-medium truncate text-base">{board.title}</h3>
+                                <p className="text-xs text-muted-foreground truncate opacity-80">{board.description || "No description provided"}</p>
+                              </div>
+                              <div className="flex items-center gap-6 flex-shrink-0">
+                                <div className="text-xs text-muted-foreground w-24 text-right hidden sm:block">
+                                  {totalTasks} {totalTasks === 1 ? 'Task' : 'Tasks'}
+                                </div>
+                                <div className="w-24 hidden md:block">
+                                  <Progress value={progress} className="h-1.5" />
+                                </div>
+                              </div>
+                              {/* Spacer for button */}
+                              <div className="w-8"></div>
+                            </Card>
+                          </Link>
+
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={(e) => openEditDialog(e, board)}>
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Rename
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => handleDeleteBoard(e, board.id)}>
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    <Button variant="outline" className="w-full border-dashed gap-2 text-muted-foreground hover:text-primary h-12" onClick={openCreateDialog}>
+                      <Plus className="h-4 w-4" />
+                      Add Board
+                    </Button>
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {activeBoards.length === 0 && (
+                  <div className="text-center py-16">
+                    <div className="h-20 w-20 mx-auto rounded-full bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center mb-4">
+                      <Star className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">No active goals yet</h3>
+                    <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                      Start by creating your first Board. What would you like to achieve?
+                    </p>
+                    <Button onClick={openCreateDialog} className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Create Your First Goal
+                    </Button>
+                  </div>
+                )}
               </div>
 
-              <Tabs defaultValue="all" className="w-full">
-                <TabsList className="bg-muted/50 w-full justify-start rounded-lg p-1 h-auto">
-                  <TabsTrigger value="all" className="rounded-md px-4 py-2">All Boards</TabsTrigger>
-                  <TabsTrigger value="recent" className="rounded-md px-4 py-2">Recent</TabsTrigger>
-                  <TabsTrigger value="starred" className="rounded-md px-4 py-2">Starred</TabsTrigger>
-                </TabsList>
+              {/* Right Column: Upcoming Tasks */}
+              <div className="lg:col-span-1">
+                <div className="sticky top-24">
+                  <h3 className="text-lg font-semibold tracking-tight mb-4">Upcoming Tasks</h3>
+                  <Card className="border border-border/50 shadow-sm bg-card overflow-hidden">
+                    {upcomingTasks.length > 0 ? (
+                      <div className="divide-y divide-border/40">
+                        {upcomingTasks.map(task => {
+                          const column = columns.find(c => c.id === task.columnId);
+                          const board = column ? boards.find(b => b.id === column.boardId) : null;
 
-                {["all", "recent", "starred"].map((tab) => (
-                  <TabsContent key={tab} value={tab} className="mt-6">
-                    {activeView === "grid" ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {getFilteredBoardsByTab(tab).map((board) => {
-                          const boardTasks = getBoardTasks(board.id);
-                          const taskCount = boardTasks.length;
-                          const progress = getBoardProgress(board.id);
+                          const handleCompleteTask = (taskId: string, columnId: string) => {
+                            const currentColumn = columns.find(c => c.id === columnId);
+                            if (currentColumn) {
+                              const doneColumn = columns.find(c => c.boardId === currentColumn.boardId && c.title.toLowerCase() === 'done');
+                              if (doneColumn) {
+                                moveTask(taskId, doneColumn.id);
+                              }
+                            }
+                            updateTask(taskId, { completed: true });
+                          };
 
                           return (
-                            <Card key={board.id} className="group hover:shadow-lg hover:border-primary/20 transition-all duration-300 h-full relative overflow-hidden">
-                              <Link to={`/board/${board.id}`} className="block h-full">
-                                <CardContent className="p-5 h-full flex flex-col justify-between">
-                                  <div>
-                                    <div className="flex justify-between items-start mb-2">
-                                      <div className={`h-8 w-8 rounded-lg ${board.color} bg-opacity-20 flex items-center justify-center`}>
-                                        <Layers className={`h-4 w-4 text-foreground`} />
-                                      </div>
-                                      <div onClick={(e) => e.preventDefault()}>
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
-                                              <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                            </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => setEditingBoard(board)}>
-                                              <Edit2 className="mr-2 h-4 w-4" />
-                                              Rename
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                              className="text-red-600"
-                                              onClick={() => handleDeleteBoard(board.id)}
-                                            >
-                                              <Trash2 className="mr-2 h-4 w-4" />
-                                              Delete
-                                            </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
-                                      </div>
-                                    </div>
-                                    <h3 className="font-bold text-lg mb-1">{board.title}</h3>
-                                    <p className="text-sm text-muted-foreground line-clamp-2">{board.description}</p>
-                                  </div>
-
-                                  <div className="mt-6 space-y-3">
-                                    <div className="flex justify-between text-sm">
-                                      <span className="text-muted-foreground">{taskCount} tasks</span>
-                                      <span className="font-medium">{progress}%</span>
-                                    </div>
-                                    <Progress value={progress} className="h-1.5" />
-                                    <p className="text-xs text-muted-foreground text-right">{formatTime(board.lastUpdated)}</p>
-                                  </div>
-                                </CardContent>
-                              </Link>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="absolute bottom-4 right-2 h-8 w-8 z-10 hover:bg-background/80"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  toggleBoardStar(board.id);
-                                }}
+                            <div key={task.id} className="p-4 hover:bg-muted/20 transition-colors group flex items-start gap-3">
+                              <button
+                                className="mt-1 h-5 w-5 rounded-full border-2 border-muted-foreground/30 hover:border-primary hover:bg-primary/10 flex items-center justify-center transition-all flex-shrink-0"
+                                onClick={(e) => { e.preventDefault(); handleCompleteTask(task.id, task.columnId); }}
+                                title="Mark as completed"
                               >
-                                <Star className={`h-4 w-4 ${board.isStarred ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground/50'}`} />
-                              </Button>
-                            </Card>
-                          );
-                        })}
-                        {tab === 'all' && getFilteredBoardsByTab(tab).length === 0 && (
-                          <div className="col-span-full py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg">
-                            <p>No boards found.</p>
-                            <Button variant="link" onClick={() => setShowCreateBoard(true)}>Create one?</Button>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {getFilteredBoardsByTab(tab).map((board) => {
-                          const boardTasks = getBoardTasks(board.id);
-                          const taskCount = boardTasks.length;
-                          const progress = getBoardProgress(board.id);
-                          return (
-                            <div key={board.id} className="relative group">
-                              <Link to={`/board/${board.id}`} className="block">
-                                <div className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
-                                  <div className="flex items-center gap-4">
-                                    <div className={`h-10 w-10 rounded-lg ${board.color} bg-opacity-20 flex items-center justify-center`}>
-                                      <Layers className="h-5 w-5 opacity-80" />
-                                    </div>
-                                    <div>
-                                      <p className="font-medium">{board.title}</p>
-                                      <p className="text-sm text-muted-foreground">{board.description}</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-6">
-                                    <div className="w-32 hidden sm:block">
-                                      <Progress value={progress} className="h-2" />
-                                    </div>
-                                    <div className="text-right w-24">
-                                      <p className="text-sm font-medium">{taskCount} tasks</p>
-                                      <p className="text-xs text-muted-foreground">{formatTime(board.lastUpdated)}</p>
-                                    </div>
-                                    <div className="flex items-center" onClick={(e) => e.preventDefault()}>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                        onClick={() => toggleBoardStar(board.id)}
-                                      >
-                                        <Star className={`h-4 w-4 ${board.isStarred ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
-                                      </Button>
-                                      <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                          </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                          <DropdownMenuItem onClick={() => setEditingBoard(board)}>
-                                            <Edit2 className="mr-2 h-4 w-4" />
-                                            Rename
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem
-                                            className="text-red-600"
-                                            onClick={() => handleDeleteBoard(board.id)}
-                                          >
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            Delete
-                                          </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                      </DropdownMenu>
-                                    </div>
-                                  </div>
+                                <CheckCircle2 className="h-3 w-3 text-primary opacity-0 hover:opacity-100 transition-opacity" />
+                              </button>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start gap-2 mb-1">
+                                  <h4 className="text-sm font-medium line-clamp-2 leading-tight">{task.title}</h4>
+                                  {task.priority === 'high' && <span className="h-2 w-2 rounded-full bg-red-500 mt-1 flex-shrink-0" title="High Priority" />}
                                 </div>
-                              </Link>
+
+                                <div className="flex items-center flex-wrap gap-2 mt-1.5">
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <CalendarClock className="h-3 w-3" />
+                                    {new Date(task.dueDate!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  </div>
+
+                                  {board && (
+                                    <div className="px-1.5 py-0.5 rounded-md bg-muted/50 text-[10px] font-medium text-muted-foreground border border-border/50 truncate max-w-[100px]">
+                                      {board.title}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground self-center" onClick={() => board && navigate(`/board/${board.id}`)}>
+                                <ArrowRight className="h-4 w-4" />
+                              </Button>
                             </div>
                           )
                         })}
                       </div>
-                    )}
-                  </TabsContent>
-                ))}
-              </Tabs>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <Card className="flex flex-col h-full max-h-[800px]">
-              <CardHeader className="border-b bg-muted/20 pb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      Upcoming Tasks
-                      {taskFilter !== 'all' && (
-                        <Badge variant="secondary" className="capitalize text-xs">
-                          {taskFilter.replace('_', ' ')}
-                        </Badge>
-                      )}
-                    </CardTitle>
-                    <CardDescription>
-                      {taskFilter === 'all' ? "Prioritized for you" : `Filtered by ${taskFilter.replace('_', ' ')}`}
-                    </CardDescription>
-                  </div>
-                  {taskFilter !== 'all' && (
-                    <Button variant="ghost" size="sm" onClick={() => setTaskFilter('all')} className="h-6 px-2 text-xs">
-                      <X className="h-3 w-3 mr-1" /> Clear
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1 overflow-auto p-0">
-                <div className="divide-y">
-                  {tasks
-                    .filter(t => {
-                      // Global Search Filtering
-                      if (searchQuery && !t.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-                        return false;
-                      }
-
-                      if (!t.dueDate) return false;
-                      const due = new Date(t.dueDate);
-
-                      const column = columns.find(c => c.id === t.columnId);
-                      const isDone = column && ['done', 'completed', 'finished'].includes(column.title.toLowerCase());
-
-                      if (isDone) return false;
-
-                      const isOverdue = due < now;
-                      const isToday = due.getDate() === now.getDate() && due.getMonth() === now.getMonth();
-                      const isSoon = due > now && due.getTime() - now.getTime() < 2 * 24 * 60 * 60 * 1000;
-
-                      if (taskFilter === 'overdue') return isOverdue;
-                      if (taskFilter === 'today') return isToday;
-                      if (taskFilter === 'due_soon') return isSoon;
-                      return true;
-                    })
-                    .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
-                    .slice(0, 10)
-                    .map((task, index) => {
-                      const board = boards.find(b => getBoardTasks(b.id).find(t => t.id === task.id));
-                      const due = new Date(task.dueDate!);
-                      const isOverdue = due < now;
-                      const isToday = due.getDate() === now.getDate();
-
-                      return (
-                        <div key={index} className="p-4 hover:bg-muted/50 transition-colors group">
-                          <div className="flex items-start gap-3">
-                            <button
-                              className="mt-1 h-5 w-5 rounded-full border-2 border-muted-foreground/30 hover:border-green-500 hover:bg-green-50 transition-colors flex items-center justify-center shrink-0"
-                              onClick={() => handleTaskCompletion(task.id)}
-                              title="Mark as done"
-                            >
-                              <CheckCircle className="h-3 w-3 text-transparent group-hover:text-green-500" />
-                            </button>
-
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{task.title}</p>
-                              <div className="flex items-center gap-2 mt-1.5">
-                                {board && (
-                                  <Link to={`/board/${board.id}`} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 truncate">
-                                    <Layers className="h-3 w-3" />
-                                    {board.title}
-                                  </Link>
-                                )}
-                                <span className="text-muted-foreground/30 text-xs">•</span>
-                                <span className={`text-xs font-medium ${isOverdue ? "text-red-500" : isToday ? "text-orange-500" : "text-muted-foreground"}`}>
-                                  {isOverdue ? "Overdue" : isToday ? "Today" : new Date(task.dueDate!).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                </span>
-                              </div>
-                            </div>
-
-                            {board && (
-                              <Link to={`/board/${board.id}`}>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                </Button>
-                              </Link>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  {tasks.filter(t => t.dueDate && !columns.find(c => c.id === t.columnId && ['done', 'completed'].includes(c.title.toLowerCase()))).length === 0 && (
-                    <div className="p-8 text-center">
-                      <div className="h-12 w-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <CheckCircle className="h-6 w-6" />
+                    ) : (
+                      <div className="p-8 text-center text-muted-foreground">
+                        <CheckCircle2 className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                        <p className="text-sm">No upcoming deadlines</p>
                       </div>
-                      <p className="text-sm font-medium">You're all caught up!</p>
-                      <p className="text-xs text-muted-foreground mt-1">No upcoming tasks due.</p>
+                    )}
+                    <div className="bg-muted/20 p-3 border-t border-border/40 text-center">
+                      <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => navigate('/tasks')}>
+                        View Calendar
+                      </Button>
                     </div>
-                  )}
+                  </Card>
                 </div>
-              </CardContent>
-              <CardFooter className="pt-2 pb-4 border-t bg-muted/20">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full gap-2 text-muted-foreground hover:text-foreground text-xs h-8"
-                  onClick={() => navigate('/tasks')}
-                >
-                  View all tasks
-                  <ChevronRight className="h-3 w-3" />
-                </Button>
-              </CardFooter>
-            </Card>
+              </div>
+            </div>
           </div>
         </div>
       </main>
 
-      <Dialog open={!!editingBoard} onOpenChange={() => setEditingBoard(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rename Board</DialogTitle>
-            <DialogDescription>
-              Update your board details below.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label htmlFor="name" className="text-sm font-medium">Name</label>
-              <Input
-                id="name"
-                value={editingBoard?.title || ""}
-                onChange={(e) => setEditingBoard(prev => prev ? { ...prev, title: e.target.value } : null)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <label htmlFor="desc" className="text-sm font-medium">Description</label>
-              <Input
-                id="desc"
-                value={editingBoard?.description || ""}
-                onChange={(e) => setEditingBoard(prev => prev ? { ...prev, description: e.target.value } : null)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingBoard(null)}>Cancel</Button>
-            <Button onClick={handleRenameBoard}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+      {/* Create Board Dialog */}
       <Dialog open={showCreateBoard} onOpenChange={setShowCreateBoard}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Board</DialogTitle>
-            <DialogDescription>
-              Add a new board to organize your tasks.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label htmlFor="boardName" className="text-sm font-medium">Board Name</label>
-              <Input
-                id="boardName"
-                placeholder="e.g., Marketing Campaign"
-                value={newBoardTitle}
-                onChange={(e) => setNewBoardTitle(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <label htmlFor="boardDesc" className="text-sm font-medium">Description</label>
-              <Input
-                id="boardDesc"
-                placeholder="Description"
-                value={newBoardDesc}
-                onChange={(e) => setNewBoardDesc(e.target.value)}
-              />
+        <DialogContent className="sm:max-w-[500px] p-0 gap-0 overflow-hidden rounded-xl">
+          <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-6">
+            <DialogHeader>
+              <DialogTitle className="text-xl">{editingBoard ? "Edit Board" : "New Board"}</DialogTitle>
+              <DialogDescription>
+                {editingBoard ? "Update your personal goal details" : "Define a personal goal or area you want to focus on"}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="p-6 space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="boardName" className="text-sm font-medium">Goal Name</Label>
+                <Input
+                  id="boardName"
+                  value={newBoardTitle}
+                  onChange={e => setNewBoardTitle(e.target.value)}
+                  placeholder="e.g., Learn Spanish, Fitness Journey, Read 20 Books"
+                  className="h-10"
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="boardDesc" className="text-sm font-medium">Description</Label>
+                <Input
+                  id="boardDesc"
+                  value={newBoardDesc}
+                  onChange={e => setNewBoardDesc(e.target.value)}
+                  placeholder="Why is this important? What do you want to achieve?"
+                  className="h-10"
+                />
+              </div>
+
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateBoard(false)}>Cancel</Button>
-            <Button onClick={handleCreateBoard}>Create Board</Button>
+
+          <DialogFooter className="px-6 py-4 border-t bg-muted/20">
+            <Button variant="outline" onClick={() => setShowCreateBoard(false)} className="h-9">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveBoard}
+              className="h-9 gap-2"
+              disabled={!newBoardTitle.trim()}
+            >
+              <Target className="h-4 w-4" />
+              {editingBoard ? "Save Changes" : "Create Board"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

@@ -7,6 +7,7 @@ export interface Task {
   description?: string;
   priority: Priority;
   dueDate?: string;
+  completed?: boolean;
 }
 
 export interface Column {
@@ -24,4 +25,11 @@ export interface Board {
   lastUpdated: number;
   isStarred?: boolean;
   lastViewed?: number;
+  priority?: Priority;
+  completed?: boolean;
+  progress?: number;
+  totalTasks?: number;
+  completedTasks?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }

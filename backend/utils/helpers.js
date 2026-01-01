@@ -79,6 +79,15 @@ const toCamelCaseKeys = (obj) => {
     return obj;
 };
 
+/**
+ * Convert camelCase string to snake_case
+ * @param {string} str - String to convert
+ * @returns {string} snake_case string
+ */
+const toSnakeCase = (str) => {
+    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+};
+
 module.exports = {
     generateId,
     getCurrentTimestamp,
@@ -86,4 +95,5 @@ module.exports = {
     isValidPriority,
     createError,
     toCamelCaseKeys,
+    toSnakeCase,
 };

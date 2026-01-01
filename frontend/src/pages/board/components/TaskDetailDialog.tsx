@@ -62,7 +62,7 @@ export function TaskDetailDialog({
                     setDueDate(undefined);
                 }
 
-                setColumnId(task.columnId);
+                setColumnId(task.columnId || defaultColumnId || columns[0]?.id || "");
             } else {
                 // Create mode - reset defaults
                 setTitle("");
@@ -75,7 +75,14 @@ export function TaskDetailDialog({
     }, [task, isOpen, defaultColumnId, columns]);
 
     const handleSave = async () => {
-        if (!title.trim() || !columnId) return;
+        if (!title.trim()) {
+            alert("Please enter a task title");
+            return;
+        }
+        if (!columnId) {
+            alert("Please select a column");
+            return;
+        }
 
         try {
             if (task) {
@@ -122,7 +129,7 @@ export function TaskDetailDialog({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-[600px] p-0 gap-0 overflow-hidden bg-card">
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] grid-rows-[auto_1fr_auto] p-0 gap-0 overflow-hidden bg-card">
                 {/* Header / Title Area */}
                 <div className="pt-6 pl-6 pb-4 pr-12 border-b">
                     <Input
@@ -154,8 +161,8 @@ export function TaskDetailDialog({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] h-full">
-                    {/* Main Content Area */}
+                {/* Main Content Area - Scrollable */}
+                <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] overflow-y-auto min-h-0">
                     <div className="p-6 space-y-6">
                         <div className="space-y-2">
                             <div className="flex items-center gap-2 text-sm font-semibold text-foreground/80">
@@ -212,7 +219,7 @@ export function TaskDetailDialog({
                                     <Button
                                         variant={"outline"}
                                         className={cn(
-                                            "w-full justify-start text-left font-normal bg-background border-none shadow-sm pl-3",
+                                            "w-full justify-start text-left font-normal bg-background shadow-sm pl-3 border",
                                             !dueDate && "text-muted-foreground"
                                         )}
                                     >
@@ -243,7 +250,9 @@ export function TaskDetailDialog({
 
                     <div className="flex gap-2">
                         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                        <Button onClick={handleSave}>{task ? "Save Changes" : "Create Task"}</Button>
+                        <Button onClick={handleSave}>
+                            {task ? "Save Changes" : "Create Task"}
+                        </Button>
                     </div>
                 </DialogFooter>
             </DialogContent>

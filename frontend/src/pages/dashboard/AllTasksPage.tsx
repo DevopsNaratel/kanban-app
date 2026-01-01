@@ -2,7 +2,9 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useKanban } from "@/context/KanbanContext";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChevronLeft, ChevronRight, Search, FilterX } from "lucide-react";
 import {
     format,
     addMonths,
@@ -32,6 +34,10 @@ export default function AllTasksPage() {
     const [viewMode, setViewMode] = useState<ViewMode>("month");
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    // Search and Filter State
+    const [searchQuery, setSearchQuery] = useState("");
+    const [priorityFilter, setPriorityFilter] = useState<string>("all");
 
     // For creating tasks from calendar
     const [createTaskDate, setCreateTaskDate] = useState<Date | undefined>(undefined);
@@ -63,28 +69,42 @@ export default function AllTasksPage() {
 
     // Filter tasks for the current view
     const visibleTasks = useMemo(() => {
-        // Simple filtering: tasks with a valid date that matches current range
-        // Note: In a real app, you'd range query the backend.
-        // Here we just filter client-side.
         return tasks.filter(task => {
+            // 1. Date Check
             if (!task.dueDate) return false;
             const taskDate = new Date(task.dueDate);
             if (isNaN(taskDate.getTime())) return false; // Skip invalid dates
 
+            let matchesDate = false;
             if (viewMode === "month") {
-                return isSameMonth(taskDate, currentDate);
-            }
-            if (viewMode === "week") {
+                matchesDate = isSameMonth(taskDate, currentDate);
+            } else if (viewMode === "week") {
                 const start = startOfWeek(currentDate);
                 const end = endOfWeek(currentDate);
-                return taskDate >= start && taskDate <= end;
+                matchesDate = taskDate >= start && taskDate <= end;
+            } else if (viewMode === "day") {
+                matchesDate = isSameDay(taskDate, currentDate);
             }
-            if (viewMode === "day") {
-                return isSameDay(taskDate, currentDate);
+            
+            if (!matchesDate) return false;
+
+            // 2. Search Check
+            if (searchQuery.trim()) {
+                const query = searchQuery.toLowerCase();
+                const matchesSearch = 
+                    task.title.toLowerCase().includes(query) || 
+                    (task.description?.toLowerCase().includes(query));
+                if (!matchesSearch) return false;
             }
-            return false;
+
+            // 3. Priority Check
+            if (priorityFilter !== "all" && task.priority !== priorityFilter) {
+                return false;
+            }
+
+            return true;
         });
-    }, [tasks, currentDate, viewMode]);
+    }, [tasks, currentDate, viewMode, searchQuery, priorityFilter]);
 
     // Calendar Grid Generation
     const days = useMemo(() => {
@@ -165,6 +185,43 @@ export default function AllTasksPage() {
                     </Button>
                 </div>
             </header>
+
+            {/* Filter Toolbar */}
+            <div className="px-6 py-3 border-b bg-muted/20 flex flex-col sm:flex-row gap-3 items-center justify-between">
+                <div className="relative w-full sm:w-72">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search tasks..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 h-9 bg-background"
+                    />
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                        <SelectTrigger className="w-[160px] h-9 bg-background">
+                            <SelectValue placeholder="Priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Priorities</SelectItem>
+                            <SelectItem value="low">Low Priority</SelectItem>
+                            <SelectItem value="medium">Medium Priority</SelectItem>
+                            <SelectItem value="high">High Priority</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    {(searchQuery || priorityFilter !== 'all') && (
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => { setSearchQuery(""); setPriorityFilter("all"); }}
+                            className="h-9 px-2 text-muted-foreground hover:text-foreground"
+                            title="Clear filters"
+                        >
+                            <FilterX className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
+            </div>
 
             {/* Calendar View */}
             <div className="flex-1 overflow-auto p-6">
@@ -248,9 +305,9 @@ export default function AllTasksPage() {
                 onClose={() => setIsDialogOpen(false)}
                 task={selectedTask}
                 onUpdate={updateTask}
-                onCreate={(task) => {
+                onCreate={async (task) => {
                     // Inject the clicked date if we're creating from a calendar click
-                    addTask({
+                    await addTask({
                         ...task,
                         dueDate: createTaskDate ? createTaskDate.toDateString() : task.dueDate
                     })

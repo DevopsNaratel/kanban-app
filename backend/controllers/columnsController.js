@@ -1,5 +1,5 @@
 const db = require('../config/database');
-const { generateId, getCurrentTimestamp, validateRequiredFields, createError, toCamelCaseKeys } = require('../utils/helpers');
+const { generateId, getCurrentTimestamp, validateRequiredFields, createError, toCamelCaseKeys, toSnakeCase } = require('../utils/helpers');
 
 // Helper to verify board ownership for a column
 const verifyColumnOwnership = async (clientOrDb, columnId, userId) => {
@@ -100,8 +100,9 @@ const updateColumn = async (req, res, next) => {
         let paramCount = 1;
 
         for (const [key, value] of Object.entries(updates)) {
-            if (key !== 'id' && key !== 'boardId') {
-                const columnName = key === 'order' ? '"order"' : key;
+            const snakeKey = toSnakeCase(key);
+            if (snakeKey !== 'id' && snakeKey !== 'board_id') {
+                const columnName = snakeKey === 'order' ? '"order"' : snakeKey;
                 fields.push(`${columnName} = $${paramCount}`);
                 values.push(value);
                 paramCount++;

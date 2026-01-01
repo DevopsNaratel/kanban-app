@@ -1,5 +1,5 @@
 const db = require('../config/database');
-const { generateId, getCurrentTimestamp, validateRequiredFields, isValidPriority, createError, toCamelCaseKeys } = require('../utils/helpers');
+const { generateId, getCurrentTimestamp, validateRequiredFields, isValidPriority, createError, toCamelCaseKeys, toSnakeCase } = require('../utils/helpers');
 
 // Helper to verify task ownership
 const verifyTaskOwnership = async (clientOrDb, taskId, userId) => {
@@ -137,7 +137,7 @@ const updateTask = async (req, res, next) => {
 
         for (const [key, value] of Object.entries(updates)) {
             if (key !== 'id') {
-                fields.push(`${key} = $${paramCount}`);
+                fields.push(`${toSnakeCase(key)} = $${paramCount}`);
                 values.push(value);
                 paramCount++;
             }
