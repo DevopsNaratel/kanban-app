@@ -30,7 +30,6 @@ import {
   Calendar,
   CheckCircle2,
   Star,
-  Flame,
   ArrowRight,
   MoreVertical,
   Pencil,
@@ -145,10 +144,8 @@ export default function DashboardPage() {
       <aside className="w-64 border-r bg-sidebar/50 backdrop-blur-sm hidden md:flex flex-col sticky top-0 h-screen">
         <div className="h-16 flex items-center px-6 border-b border-sidebar-border">
           <div className="flex items-center gap-3 font-semibold text-sm tracking-tight text-sidebar-foreground">
-            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground shadow-sm">
-              <Flame className="h-3.5 w-3.5" />
-            </div>
-            <span>FlowFocus</span>
+
+            <span>hantuin</span>
           </div>
         </div>
 

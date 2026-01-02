@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const { v4: uuidv4 } = require('uuid');
 require('dotenv').config();
 
 const authRouter = require('./routes/auth');
@@ -20,9 +21,16 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Request ID Middleware
+app.use((req, res, next) => {
+    req.id = uuidv4();
+    next();
+});
+
+// Request logging
 // Request logging
 app.use((req, res, next) => {
-    logger.info(`${req.method} ${req.path}`);
+    const logMeta = { requestId: req.id };
 
     if (req.method === 'POST' && req.body) {
         const sanitizedBody = { ...req.body };
@@ -34,8 +42,10 @@ app.use((req, res, next) => {
             }
         });
 
-        logger.info('Request Payload:', sanitizedBody);
+        logMeta.payload = sanitizedBody;
     }
+
+    logger.info(`${req.method} ${req.path}`, logMeta);
 
     next();
 });

@@ -10,9 +10,8 @@ const logger = winston.createLogger({
     ),
     defaultMeta: {
         service: process.env.SERVICE_NAME || 'kanban-backend',
-        env: process.env.NODE_ENV || 'development',
-        pod: process.env.POD_NAME || 'unknown-pod',
-        namespace: process.env.POD_NAMESPACE || 'unknown-namespace'
+        pod: process.env.HOSTNAME || 'unknown-pod',
+
     },
     transports: [
         new winston.transports.Console({
@@ -24,9 +23,7 @@ const logger = winston.createLogger({
                         level,
                         message,
                         service,
-                        env,
                         pod,
-                        namespace,
                         requestId,
                         stack,
                         ...rest
@@ -37,10 +34,8 @@ const logger = winston.createLogger({
                         level,
                         message,
                         service,
-                        env,
                         requestId: requestId || undefined, // Only include if present
                         pod,
-                        namespace
                     };
 
                     if (stack) {
