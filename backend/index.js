@@ -23,6 +23,20 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Request logging
 app.use((req, res, next) => {
     logger.info(`${req.method} ${req.path}`);
+
+    if (req.method === 'POST' && req.body) {
+        const sanitizedBody = { ...req.body };
+        const sensitiveFields = ['password', 'token', 'secret', 'authorization'];
+
+        sensitiveFields.forEach(field => {
+            if (sanitizedBody[field]) {
+                sanitizedBody[field] = '***';
+            }
+        });
+
+        logger.info('Request Payload:', sanitizedBody);
+    }
+
     next();
 });
 

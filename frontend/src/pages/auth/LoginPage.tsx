@@ -38,7 +38,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center text-center">
           <Link to="/" className="flex items-center gap-2 font-bold text-2xl mb-8">
             <Layout className="h-8 w-8 text-primary" />
-            <span>KanbanFlow</span>
+            <span>hantuin</span>
           </Link>
           <div className="space-y-2">
             <h2 className="text-3xl font-bold tracking-tight">Welcome back</h2>

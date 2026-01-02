@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const logger = require('../utils/logger');
 require('dotenv').config();
 
 const pool = new Pool({
@@ -13,11 +14,11 @@ const pool = new Pool({
 
 // Test connection
 pool.on('connect', () => {
-    console.log('✅ Connected to PostgreSQL database');
+    logger.info('✅ Connected to PostgreSQL database');
 });
 
 pool.on('error', (err) => {
-    console.error('❌ Unexpected database error:', err);
+    logger.error('❌ Unexpected database error:', err);
     process.exit(-1);
 });
 
@@ -27,10 +28,10 @@ const query = async (text, params) => {
     try {
         const res = await pool.query(text, params);
         const duration = Date.now() - start;
-        console.log('Executed query', { text, duration, rows: res.rowCount });
+        logger.info('Executed query', { text, duration, rows: res.rowCount });
         return res;
     } catch (error) {
-        console.error('Query error:', error);
+        logger.error('Query error:', error);
         throw error;
     }
 };

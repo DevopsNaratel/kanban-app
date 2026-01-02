@@ -23,7 +23,7 @@ export default function LandingPage() {
   }, []);
 
   const testimonials = [
-    { name: "Alex Johnson", role: "Product Manager", company: "TechCorp", content: "KanbanFlow transformed our team's productivity. We're shipping 40% faster!", avatar: "AJ", rating: 5 },
+    { name: "Alex Johnson", role: "Product Manager", company: "TechCorp", content: "hantuin transformed our team's productivity. We're shipping 40% faster!", avatar: "AJ", rating: 5 },
     { name: "Sam Rivera", role: "Engineering Lead", company: "StartupXYZ", content: "The intuitive interface and powerful automation saved us countless hours.", avatar: "SR", rating: 5 },
     { name: "Morgan Lee", role: "Design Director", company: "Creative Inc", content: "Finally a tool that both designers and developers love to use!", avatar: "ML", rating: 4 },
   ];
@@ -48,7 +48,7 @@ export default function LandingPage() {
                 <Layout className="h-7 w-7 text-primary" />
                 <Sparkles className="h-3 w-3 text-primary absolute -top-1 -right-1" />
               </div>
-              <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">KanbanFlow</span>
+              <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">hantuin</span>
             </Link>
           </div>
 
@@ -119,14 +119,14 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-secondary/10" />
           <div className="absolute top-20 right-10 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
           <div className="absolute bottom-20 left-10 h-64 w-64 rounded-full bg-secondary/10 blur-3xl" />
-          
+
           <div className="container mx-auto relative px-4 py-24 sm:px-8 lg:py-32">
             <div className="flex flex-col items-center text-center max-w-4xl mx-auto gap-8">
               <Badge variant="secondary" className="gap-2 px-4 py-1.5 animate-pulse">
                 <Sparkles className="h-3 w-3" />
                 v2.0 is now live
               </Badge>
-              
+
               <h1 className="text-4xl font-extrabold tracking-tight lg:text-7xl text-balance leading-tight">
                 Manage projects with{" "}
                 <span className="relative">
@@ -143,12 +143,12 @@ export default function LandingPage() {
                   <div className="absolute bottom-2 left-0 w-full h-3 bg-primary/20 rotate-1" />
                 </span>
               </h1>
-              
+
               <p className="text-xl text-muted-foreground text-balance max-w-2xl leading-relaxed">
-                The modern Kanban board for high-performance teams. Visualize work, maximize efficiency, 
+                The modern Kanban board for high-performance teams. Visualize work, maximize efficiency,
                 and ship faster than ever before. Trusted by 10,000+ teams worldwide.
               </p>
-              
+
               <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-4">
                 <Button size="lg" className="gap-2 group px-8" asChild>
                   <Link to="/register">
@@ -160,7 +160,7 @@ export default function LandingPage() {
                   Watch demo
                 </Button>
               </div>
-              
+
               <div className="mt-12 w-full max-w-5xl">
                 <div className="relative rounded-2xl border-2 bg-gradient-to-b from-background to-muted/50 p-3 shadow-2xl shadow-primary/10">
                   <div className="aspect-video w-full rounded-xl bg-gradient-to-br from-muted/80 to-background border flex items-center justify-center overflow-hidden">
@@ -191,7 +191,7 @@ export default function LandingPage() {
                             <Layout className="h-6 w-6 text-primary" />
                           </div>
                           <div>
-                            <h3 className="font-bold text-lg">KanbanFlow Dashboard</h3>
+                            <h3 className="font-bold text-lg">hantuin Dashboard</h3>
                             <p className="text-muted-foreground">Real-time project visualization</p>
                           </div>
                         </div>
@@ -228,29 +228,29 @@ export default function LandingPage() {
               Powerful features built for modern product teams.
             </p>
           </div>
-          
+
           <Tabs defaultValue="productivity" className="w-full">
             <TabsList className="grid grid-cols-3 max-w-md mx-auto mb-12">
               <TabsTrigger value="productivity">Productivity</TabsTrigger>
               <TabsTrigger value="collaboration">Collaboration</TabsTrigger>
               <TabsTrigger value="insights">Insights</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="productivity" className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <FeatureCard 
+                <FeatureCard
                   icon={<Zap className="h-10 w-10 text-primary mb-4" />}
                   title="Lightning Fast"
                   description="Built for speed with instant updates and real-time collaboration. No lag, just progress."
                   features={["Real-time sync", "Offline mode", "Instant search"]}
                 />
-                <FeatureCard 
+                <FeatureCard
                   icon={<Clock className="h-10 w-10 text-primary mb-4" />}
                   title="Time Tracking"
                   description="Built-in time tracking for accurate project estimations and billing."
                   features={["Pomodoro timer", "Automatic tracking", "Reports"]}
                 />
-                <FeatureCard 
+                <FeatureCard
                   icon={<CheckCircle className="h-10 w-10 text-primary mb-4" />}
                   title="Automated Workflows"
                   description="Automate repetitive tasks and focus on what matters most."
@@ -258,22 +258,22 @@ export default function LandingPage() {
                 />
               </div>
             </TabsContent>
-            
+
             <TabsContent value="collaboration">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <FeatureCard 
+                <FeatureCard
                   icon={<Users className="h-10 w-10 text-primary mb-4" />}
                   title="Team Collaboration"
                   description="Work together seamlessly with built-in communication tools."
                   features={["Team mentions", "File sharing", "Threaded comments"]}
                 />
-                <FeatureCard 
+                <FeatureCard
                   icon={<ShieldCheck className="h-10 w-10 text-primary mb-4" />}
                   title="Smart Permissions"
                   description="Granular control over who sees and does what in your projects."
                   features={["Role-based access", "Guest access", "Audit logs"]}
                 />
-                <FeatureCard 
+                <FeatureCard
                   icon={<Calendar className="h-10 w-10 text-primary mb-4" />}
                   title="Calendar Sync"
                   description="Sync tasks with Google Calendar, Outlook, and Apple Calendar."
@@ -281,22 +281,22 @@ export default function LandingPage() {
                 />
               </div>
             </TabsContent>
-            
+
             <TabsContent value="insights">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <FeatureCard 
+                <FeatureCard
                   icon={<BarChart className="h-10 w-10 text-primary mb-4" />}
                   title="Advanced Analytics"
                   description="Deep insights into your team's performance and project health."
                   features={["Burn-down charts", "Cycle time analysis", "Custom reports"]}
                 />
-                <FeatureCard 
+                <FeatureCard
                   icon={<Target className="h-10 w-10 text-primary mb-4" />}
                   title="OKR Tracking"
                   description="Align team goals with company objectives and track progress."
                   features={["Goal setting", "Progress tracking", "Automated updates"]}
                 />
-                <FeatureCard 
+                <FeatureCard
                   icon={<Shield className="h-10 w-10 text-primary mb-4" />}
                   title="Enterprise Security"
                   description="Bank-grade encryption and advanced permission controls."
@@ -317,7 +317,7 @@ export default function LandingPage() {
                 See what our users have to say about their experience.
               </p>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {testimonials.map((testimonial, index) => (
                 <Card key={index} className="relative overflow-hidden">
@@ -355,7 +355,7 @@ export default function LandingPage() {
               Choose the plan that's right for your team. No hidden fees.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {pricingPlans.map((plan, index) => (
               <Card key={index} className={cn(
@@ -384,8 +384,8 @@ export default function LandingPage() {
                       </li>
                     ))}
                   </ul>
-                  <Button 
-                    className="w-full" 
+                  <Button
+                    className="w-full"
                     variant={plan.popular ? "default" : "outline"}
                     size="lg"
                     asChild
@@ -410,7 +410,7 @@ export default function LandingPage() {
                 Can't find the answer you're looking for? Contact our support team.
               </p>
             </div>
-            
+
             <div className="space-y-6">
               {[
                 { q: "Is there a free trial?", a: "Yes! All paid plans come with a 14-day free trial. No credit card required." },
@@ -433,7 +433,7 @@ export default function LandingPage() {
             <div className="absolute inset-0 bg-grid-white/10" />
             <div className="absolute top-0 right-0 -mt-20 -mr-20 h-[300px] w-[300px] rounded-full bg-white/10 blur-3xl" />
             <div className="absolute bottom-0 left-0 -mb-20 -ml-20 h-[300px] w-[300px] rounded-full bg-white/10 blur-3xl" />
-            
+
             <div className="relative z-10">
               <Badge variant="secondary" className="mb-6">Limited Time Offer</Badge>
               <h2 className="text-3xl font-bold tracking-tight sm:text-5xl mb-6">
@@ -443,12 +443,12 @@ export default function LandingPage() {
                 Join 10,000+ teams who have transformed how they build software.
                 Get 2 months free on annual plans.
               </p>
-              
+
               <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
                 <div className="relative flex-1">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Enter your work email" 
+                  <Input
+                    placeholder="Enter your work email"
                     className="pl-10 bg-background text-foreground"
                   />
                 </div>
@@ -459,7 +459,7 @@ export default function LandingPage() {
                   </Link>
                 </Button>
               </div>
-              
+
               <p className="text-sm text-primary-foreground/60 mt-4">
                 Free 14-day trial • No credit card required
               </p>
@@ -477,7 +477,7 @@ export default function LandingPage() {
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Layout className="h-6 w-6 text-primary" />
                 </div>
-                <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">KanbanFlow</span>
+                <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">hantuin</span>
               </div>
               <p className="text-muted-foreground max-w-md">
                 Making project management simple, fast, and effective for teams of all sizes.
@@ -490,7 +490,7 @@ export default function LandingPage() {
                 ))}
               </div>
             </div>
-            
+
             {[
               { title: "Product", links: ["Features", "Pricing", "Changelog", "Integrations", "API"] },
               { title: "Company", links: ["About", "Careers", "Blog", "Press", "Contact"] },
@@ -510,10 +510,10 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-          
+
           <div className="border-t pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted-foreground">
-              © 2024 KanbanFlow Inc. All rights reserved.
+              © 2024 hantuin Inc. All rights reserved.
             </p>
             <div className="flex gap-6 text-sm text-muted-foreground">
               <a href="#" className="hover:text-foreground">Privacy Policy</a>
@@ -539,14 +539,14 @@ function StatCard({ icon, value, label }: { icon: React.ReactNode, value: string
   );
 }
 
-function FeatureCard({ 
-  icon, 
-  title, 
-  description, 
-  features 
-}: { 
-  icon: React.ReactNode, 
-  title: string, 
+function FeatureCard({
+  icon,
+  title,
+  description,
+  features
+}: {
+  icon: React.ReactNode,
+  title: string,
   description: string,
   features?: string[]
 }) {
