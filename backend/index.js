@@ -33,6 +33,10 @@ app.use((req, res, next) => {
         requestId: req.id,
         method: req.method,
         path: req.path,
+    };
+
+    // Construct attributes object
+    const attributes = {
         userAgent: req.headers['user-agent']
     };
 
@@ -46,12 +50,14 @@ app.use((req, res, next) => {
             }
         });
 
-        logMeta.payload = sanitizedBody;
+        attributes.payload = sanitizedBody;
     } else if (req.method === 'GET') {
         if (Object.keys(req.query).length > 0) {
-            logMeta.queryParams = req.query;
+            attributes.queryParams = req.query;
         }
     }
+
+    logMeta.attributes = attributes;
 
     logger.info('Incoming request', logMeta);
 
@@ -73,8 +79,11 @@ app.get('/health', (req, res) => {
 app.use((err, req, res, next) => {
     logger.error(err.message || 'Internal server error', {
         requestId: req.id,
-        stack: err.stack,
-        code: err.code || 'INTERNAL_ERROR'
+        error: {
+            code: err.code || 'INTERNAL_ERROR',
+            details: err.message,
+            stackTrace: err.stack
+        }
     });
     res.status(err.status || 500).json({
         error: err.message || 'Internal server error'

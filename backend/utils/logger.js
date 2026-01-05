@@ -21,11 +21,10 @@ const logger = winston.createLogger({
                         requestId,
                         method,
                         path,
-                        payload,
-                        queryParams,
-                        userAgent,
+                        attributes,
+                        metrics,
+                        error,
                         stack,
-                        error, // in case it's passed explicitly
                         ...rest
                     } = info;
 
@@ -35,32 +34,39 @@ const logger = winston.createLogger({
                         requestId,
                         method,
                         path,
-                        message,
+                        message
                     };
 
-                    // Optional fields based on standard
-                    if (payload) logObject.payload = payload;
-                    if (queryParams && Object.keys(queryParams).length > 0) logObject.queryParams = queryParams;
-                    if (userAgent) logObject.userAgent = userAgent;
+                    // Nest contextual data in attributes
+                    if (attributes) {
+                        logObject.attributes = attributes;
+                    }
 
-                    // Error handling
+                    // Allow top-level payload/queryParams/userAgent to be auto-nested if somehow passed not in attributes
+                    // but ideally the caller should structure it. 
+                    // To be safe and compliant, we check if there are leftover fields in `rest` that might belong to attributes
+                    // If strict compliance is needed, we might assume `rest` are attributes.
+                    if (Object.keys(rest).length > 0) {
+                        logObject.attributes = { ...logObject.attributes, ...rest };
+                    }
+
+                    if (metrics) {
+                        logObject.metrics = metrics;
+                    }
+
                     if (level === 'error') {
-                        // If 'error' object is passed directly or if 'stack' exists (from logger.error(err))
                         if (error) {
                             logObject.error = error;
                         } else if (stack) {
                             logObject.error = {
-                                details: stack,
-                                // You might want to extract code if available, otherwise generic
-                                code: rest.code || 'INTERNAL_ERROR'
+                                details: message, // or stack
+                                stackTrace: stack,
+                                code: 'INTERNAL_ERROR'
                             };
                         }
                     }
 
-                    // Include any other metadata that was passed, but be careful not to pollute if strict
-                    // The standard seems strict, so maybe we only include specific ones or 'rest' if truly needed.
-                    // For now, let's include rest to capture unexpected context, but normally we'd filter.
-                    // But since we removed service/pod from defaultMeta, they won't be here unless passed.
+                    // Remove empty keys if any (optional, but clean)
 
                     return JSON.stringify(logObject);
                 })
