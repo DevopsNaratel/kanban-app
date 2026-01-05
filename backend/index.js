@@ -27,6 +27,33 @@ app.use((req, res, next) => {
     next();
 });
 
+// Performance Logging Middleware
+app.use((req, res, next) => {
+    const start = process.hrtime();
+
+    res.on('finish', () => {
+        const diff = process.hrtime(start);
+        const durationMs = (diff[0] * 1000) + (diff[1] / 1e6);
+        const thresholdMs = 1000; // 1 second threshold
+
+        if (durationMs > thresholdMs) {
+            logger.warn('Slow request detected', {
+                requestId: req.id,
+                method: 'INTERNAL', // or req.method, but LOGGER.md example used INTERNAL for perf events, though for HTTP maybe keep Method? The example was 'Database/QueryExecutor'. For HTTP slow request, maybe use req.method. Let's stick to the spirit: it's a perf event.
+                // The example says: method: "INTERNAL", path: "Database/QueryExecutor".
+                // uniquely identifying this as a slow HTTP request:
+                path: req.path, // Keep path
+                metrics: {
+                    executionTimeMs: durationMs,
+                    thresholdMs: thresholdMs
+                }
+            });
+        }
+    });
+
+    next();
+});
+
 // Request logging
 app.use((req, res, next) => {
     const logMeta = {
