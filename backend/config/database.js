@@ -28,10 +28,30 @@ const query = async (text, params) => {
     try {
         const res = await pool.query(text, params);
         const duration = Date.now() - start;
-        logger.info('Executed query', { text, duration, rows: res.rowCount });
+        logger.info('Executed query', {
+            method: 'INTERNAL',
+            path: 'Database',
+            attributes: {
+                query: text,
+                duration,
+                rows: res.rowCount
+            }
+        });
         return res;
     } catch (error) {
-        logger.error('Query error:', error);
+        logger.error('Query error:', {
+            method: 'INTERNAL',
+            path: 'Database',
+            requestId: 'system', // or internal unique ID if available? No standard yet.
+            error: {
+                details: error.message,
+                stackTrace: error.stack,
+                code: error.code || 'DB_ERROR'
+            },
+            attributes: {
+                query: text
+            }
+        });
         throw error;
     }
 };
