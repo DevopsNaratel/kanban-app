@@ -28,11 +28,15 @@ app.use((req, res, next) => {
 });
 
 // Request logging
-// Request logging
 app.use((req, res, next) => {
-    const logMeta = { requestId: req.id };
+    const logMeta = {
+        requestId: req.id,
+        method: req.method,
+        path: req.path,
+        userAgent: req.headers['user-agent']
+    };
 
-    if (req.method === 'POST' && req.body) {
+    if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
         const sanitizedBody = { ...req.body };
         const sensitiveFields = ['password', 'token', 'secret', 'authorization'];
 
@@ -43,9 +47,13 @@ app.use((req, res, next) => {
         });
 
         logMeta.payload = sanitizedBody;
+    } else if (req.method === 'GET') {
+        if (Object.keys(req.query).length > 0) {
+            logMeta.queryParams = req.query;
+        }
     }
 
-    logger.info(`${req.method} ${req.path}`, logMeta);
+    logger.info('Incoming request', logMeta);
 
     next();
 });
@@ -63,7 +71,11 @@ app.get('/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    logger.error('Error:', err);
+    logger.error(err.message || 'Internal server error', {
+        requestId: req.id,
+        stack: err.stack,
+        code: err.code || 'INTERNAL_ERROR'
+    });
     res.status(err.status || 500).json({
         error: err.message || 'Internal server error'
     });
