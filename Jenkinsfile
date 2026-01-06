@@ -5,13 +5,9 @@ pipeline {
         APP_NAME          = 'kanban-app'
         DOCKER_IMAGE_FE   = "diwamln/${APP_NAME}-frontend"
         DOCKER_IMAGE_BE   = "diwamln/${APP_NAME}-backend"
-        DOCKER_CREDS      = 'docker-hub'
+        DOCKER_CREDS      = 'docker-cred'
         GIT_CREDS         = 'git-token'
-        MANIFEST_REPO_URL = 'https://github.com/DevopsNaratel/deployment-manifests.git'
-        MANIFEST_DEV_PATH_FE  = "${APP_NAME}-frontend/dev/deployment.yaml"
-        MANIFEST_DEV_PATH_BE  = "${APP_NAME}-backend/dev/deployment.yaml"
-        MANIFEST_PROD_PATH_FE = "${APP_NAME}-frontend/prod/deployment.yaml"
-        MANIFEST_PROD_PATH_BE = "${APP_NAME}-backend/prod/deployment.yaml"
+        MANIFEST_REPO_URL = 'github.com/DevopsNaratel/deployment-manifests.git'
     }
 
     stages {
@@ -26,53 +22,21 @@ pipeline {
             }
         }
 
-        stage('Build & Push Backend') {
+        stage('Build & Push Images') {
             steps {
-                container('docker') {
-                    withCredentials([
-                        usernamePassword(credentialsId: "${DOCKER_CREDS}", passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')
-                    ]) {
-                        sh """
-                            docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
-                            
-                            # Build backend
-                            docker build \
-                                --network=host \
-                                -t ${DOCKER_IMAGE_BE}:${env.BASE_TAG} \
-                                -f backend/Dockerfile \
-                                ./backend
-                            
-                            # Push backend
-                            docker push ${DOCKER_IMAGE_BE}:${env.BASE_TAG}
-                            docker tag ${DOCKER_IMAGE_BE}:${env.BASE_TAG} ${DOCKER_IMAGE_BE}:latest
-                            docker push ${DOCKER_IMAGE_BE}:latest
-                        """
-                    }
-                }
-            }
-        }
+                script {
+                    // Menggunakan docker.withRegistry lebih aman daripada docker login manual
+                    docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_CREDS}") {
+                        
+                        // Backend
+                        def beImage = docker.build("${DOCKER_IMAGE_BE}:${env.BASE_TAG}", "-f backend/Dockerfile ./backend")
+                        beImage.push()
+                        beImage.push('latest')
 
-        stage('Build & Push Frontend') {
-            steps {
-                container('docker') {
-                    withCredentials([
-                        usernamePassword(credentialsId: "${DOCKER_CREDS}", passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')
-                    ]) {
-                        sh """
-                            docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
-                            
-                            # Build frontend
-                            docker build \
-                                --network=host \
-                                -t ${DOCKER_IMAGE_FE}:${env.BASE_TAG} \
-                                -f frontend/Dockerfile \
-                                ./frontend
-                            
-                            # Push frontend
-                            docker push ${DOCKER_IMAGE_FE}:${env.BASE_TAG}
-                            docker tag ${DOCKER_IMAGE_FE}:${env.BASE_TAG} ${DOCKER_IMAGE_FE}:latest
-                            docker push ${DOCKER_IMAGE_FE}:latest
-                        """
+                        // Frontend
+                        def feImage = docker.build("${DOCKER_IMAGE_FE}:${env.BASE_TAG}", "-f frontend/Dockerfile ./frontend")
+                        feImage.push()
+                        feImage.push('latest')
                     }
                 }
             }
@@ -81,8 +45,11 @@ pipeline {
         stage('Update Manifest DEV') {
             steps {
                 script {
-                    updateManifest('dev', env.MANIFEST_DEV_PATH_BE, env.DOCKER_IMAGE_BE)
-                    updateManifest('dev', env.MANIFEST_DEV_PATH_FE, env.DOCKER_IMAGE_FE)
+                    // Update sekaligus dalam satu kali clone untuk efisiensi
+                    updateManifests('dev', [
+                        [path: "${APP_NAME}-backend/dev/deployment.yaml", image: env.DOCKER_IMAGE_BE],
+                        [path: "${APP_NAME}-frontend/dev/deployment.yaml", image: env.DOCKER_IMAGE_FE]
+                    ])
                 }
             }
         }
@@ -96,46 +63,34 @@ pipeline {
         stage('Promote to PROD') {
             steps {
                 script {
-                    updateManifest('prod', env.MANIFEST_PROD_PATH_BE, env.DOCKER_IMAGE_BE)
-                    updateManifest('prod', env.MANIFEST_PROD_PATH_FE, env.DOCKER_IMAGE_FE)
+                    updateManifests('prod', [
+                        [path: "${APP_NAME}-backend/prod/deployment.yaml", image: env.DOCKER_IMAGE_BE],
+                        [path: "${APP_NAME}-frontend/prod/deployment.yaml", image: env.DOCKER_IMAGE_FE]
+                    ])
                 }
             }
         }
     }
     
-    post {
-        always {
-            cleanWs()
-        }
-        success {
-            echo "✅ Pipeline completed successfully!"
-            echo "Backend Image: ${DOCKER_IMAGE_BE}:${env.BASE_TAG}"
-            echo "Frontend Image: ${DOCKER_IMAGE_FE}:${env.BASE_TAG}"
-        }
-        failure {
-            echo "❌ Pipeline failed!"
-        }
-    }
+    // ... post section tetap sama ...
 }
 
-def updateManifest(envName, filePath, dockerImage) {
-    withCredentials([usernamePassword(
-        credentialsId: "${env.GIT_CREDS}", 
-        passwordVariable: 'GIT_PASSWORD', 
-        usernameVariable: 'GIT_USERNAME'
-    )]) {
+def updateManifests(envName, updates) {
+    withCredentials([usernamePassword(credentialsId: "${env.GIT_CREDS}", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
         sh """
             git config --global user.email "jenkins@bot.com"
             git config --global user.name "Jenkins Bot"
-            rm -rf temp_manifest_${envName}_${dockerImage.tokenize('/')[-1]}
-            git clone ${env.MANIFEST_REPO_URL} temp_manifest_${envName}_${dockerImage.tokenize('/')[-1]}
-            cd temp_manifest_${envName}_${dockerImage.tokenize('/')[-1]}
-            sed -i "s|image: ${dockerImage}:.*|image: ${dockerImage}:${env.BASE_TAG}|g" ${filePath}
+            rm -rf temp_manifest_${envName}
+            git clone https://${GIT_USERNAME}:${GIT_PASSWORD}@${env.MANIFEST_REPO_URL} temp_manifest_${envName}
+            cd temp_manifest_${envName}
+            
+            ${updates.collect { "sed -i 's|image: ${it.image}:.*|image: ${it.image}:${env.BASE_TAG}|g' ${it.path}" }.join('\n')}
+            
             git add .
-            git commit -m "deploy: update ${dockerImage.tokenize('/')[-1]} to ${envName} image ${env.BASE_TAG}" || true
-            git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/DevopsNaratel/deployment-manifests.git main
+            git commit -m "deploy: update images to ${envName} version ${env.BASE_TAG}" || true
+            git push origin main
             cd ..
-            rm -rf temp_manifest_${envName}_${dockerImage.tokenize('/')[-1]}
+            rm -rf temp_manifest_${envName}
         """
     }
 }
