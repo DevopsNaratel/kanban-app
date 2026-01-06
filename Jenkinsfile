@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         APP_NAME          = 'kanban-app'
-        DOCKER_IMAGE_FE   = "diwamln/${APP_NAME}-frontend"
-        DOCKER_IMAGE_BE   = "diwamln/${APP_NAME}-backend"
+        DOCKER_IMAGE_FE   = "devopsnaratel/${APP_NAME}-frontend"
+        DOCKER_IMAGE_BE   = "devopsnaratel/${APP_NAME}-backend"
         DOCKER_CREDS      = 'docker-cred' 
         GIT_CREDS         = 'git-token'   
         MANIFEST_REPO_URL = 'github.com/DevopsNaratel/deployment-manifests.git'
