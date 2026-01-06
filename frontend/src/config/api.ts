@@ -1,8 +1,9 @@
 import axios, { type InternalAxiosRequestConfig, type AxiosResponse, type AxiosError } from 'axios';
 
 // API Configuration
+// Uses relative path '/api' which nginx proxies to Kong API Gateway at http://117.103.71.86:30082
 export const API_CONFIG = {
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+    baseURL: import.meta.env.VITE_API_URL || '/api',
     timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '10000'),
 };
 
