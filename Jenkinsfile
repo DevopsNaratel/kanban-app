@@ -5,11 +5,10 @@ pipeline {
         APP_NAME          = 'kanban-app'
         DOCKER_IMAGE_FE   = "diwamln/${APP_NAME}-frontend"
         DOCKER_IMAGE_BE   = "diwamln/${APP_NAME}-backend"
-        DOCKER_CREDS      = 'docker-cred' // Sesuaikan dengan ID di Jenkins Anda
-        GIT_CREDS         = 'git-token'   // Sesuaikan dengan ID di Jenkins Anda
+        DOCKER_CREDS      = 'docker-cred' 
+        GIT_CREDS         = 'git-token'   
         MANIFEST_REPO_URL = 'github.com/DevopsNaratel/deployment-manifests.git'
         
-        // Path Manifest
         FE_DEV_PATH   = "kanban-app-frontend/dev/deployment.yaml"
         BE_DEV_PATH   = "kanban-app-backend/dev/deployment.yaml"
         FE_PROD_PATH  = "kanban-app-frontend/prod/deployment.yaml"
@@ -28,20 +27,21 @@ pipeline {
             }
         }
 
-        stage('Build & Push (DEV Image)') {
+        stage('Build & Push (DEV)') {
             steps {
-                script {
-                    docker.withRegistry('', DOCKER_CREDS) {
-                        // Build & Push Backend
-                        echo "Building Backend DEV..."
-                        def beImage = docker.build("${DOCKER_IMAGE_BE}:${env.BASE_TAG}-dev", "-f backend/Dockerfile ./backend")
-                        beImage.push()
+                // Menggunakan credentials binding manual agar lebih stabil
+                withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDS}", passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                    sh """
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        
+                        # Build & Push Backend
+                        docker build -t ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-dev -f backend/Dockerfile ./backend
+                        docker push ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-dev
 
-                        // Build & Push Frontend
-                        echo "Building Frontend DEV..."
-                        def feImage = docker.build("${DOCKER_IMAGE_FE}:${env.BASE_TAG}-dev", "-f frontend/Dockerfile ./frontend")
-                        feImage.push()
-                    }
+                        # Build & Push Frontend
+                        docker build -t ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-dev -f frontend/Dockerfile ./frontend
+                        docker push ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-dev
+                    """
                 }
             }
         }
@@ -52,45 +52,50 @@ pipeline {
                     sh 'rm -rf temp_manifests'
                     dir('temp_manifests') {
                         withCredentials([usernamePassword(credentialsId: GIT_CREDS, usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-                            sh "git clone https://${GIT_USER}:${GIT_PASS}@${MANIFEST_REPO_URL} ."
-                            sh 'git config user.email "jenkins@bot.com"'
-                            sh 'git config user.name "Jenkins Pipeline"'
-                            
-                            // Update Backend & Frontend Image
-                            sh "sed -i 's|image: ${DOCKER_IMAGE_BE}:.*|image: ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-dev|g' ${BE_DEV_PATH}"
-                            sh "sed -i 's|image: ${DOCKER_IMAGE_FE}:.*|image: ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-dev|g' ${FE_DEV_PATH}"
-                            
-                            sh "git add ."
-                            sh "git commit -m 'Deploy DEV: ${env.BASE_TAG} [skip ci]'"
-                            sh "git push origin main"
+                            sh """
+                                git clone https://${GIT_USER}:${GIT_PASS}@${MANIFEST_REPO_URL} .
+                                git config user.email "jenkins@bot.com"
+                                git config user.name "Jenkins Pipeline"
+                                
+                                sed -i "s|image: ${DOCKER_IMAGE_BE}:.*|image: ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-dev|g" ${BE_DEV_PATH}
+                                sed -i "s|image: ${DOCKER_IMAGE_FE}:.*|image: ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-dev|g" ${FE_DEV_PATH}
+                                
+                                git add .
+                                git commit -m "Deploy DEV: ${env.BASE_TAG} [skip ci]" || true
+                                git push origin main
+                            """
                         }
                     }
                 }
             }
         }
 
-        stage('Approval for Production') {
+        stage('Approval') {
             steps {
-                input message: "Versi DEV (${env.BASE_TAG}-dev) sudah ok? Lanjut ke PROD?", ok: "Deploy ke Prod!"
+                input message: "Lanjut ke PROD?", ok: "Deploy!"
             }
         }
 
-        stage('Promote to PROD Image') {
+        stage('Promote to PROD') {
             steps {
-                script {
-                    docker.withRegistry('', DOCKER_CREDS) {
-                        // Promote Backend
-                        def beDevImage = docker.image("${DOCKER_IMAGE_BE}:${env.BASE_TAG}-dev")
-                        beDevImage.pull()
-                        beDevImage.push("${env.BASE_TAG}-prod")
-                        beDevImage.push("latest")
+                withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDS}", passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                    sh """
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        
+                        # Retag Backend
+                        docker pull ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-dev
+                        docker tag ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-dev ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-prod
+                        docker tag ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-dev ${DOCKER_IMAGE_BE}:latest
+                        docker push ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-prod
+                        docker push ${DOCKER_IMAGE_BE}:latest
 
-                        // Promote Frontend
-                        def feDevImage = docker.image("${DOCKER_IMAGE_FE}:${env.BASE_TAG}-dev")
-                        feDevImage.pull()
-                        feDevImage.push("${env.BASE_TAG}-prod")
-                        feDevImage.push("latest")
-                    }
+                        # Retag Frontend
+                        docker pull ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-dev
+                        docker tag ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-dev ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-prod
+                        docker tag ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-dev ${DOCKER_IMAGE_FE}:latest
+                        docker push ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-prod
+                        docker push ${DOCKER_IMAGE_FE}:latest
+                    """
                 }
             }
         }
@@ -100,26 +105,18 @@ pipeline {
                 script {
                     dir('temp_manifests') {
                         withCredentials([usernamePassword(credentialsId: GIT_CREDS, usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-                            sh "git pull origin main"
-                            
-                            // Update Backend & Frontend Image
-                            sh "sed -i 's|image: ${DOCKER_IMAGE_BE}:.*|image: ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-prod|g' ${BE_PROD_PATH}"
-                            sh "sed -i 's|image: ${DOCKER_IMAGE_FE}:.*|image: ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-prod|g' ${FE_PROD_PATH}"
-                            
-                            sh "git add ."
-                            sh "git commit -m 'Promote PROD: ${env.BASE_TAG} [skip ci]'"
-                            sh "git push origin main"
+                            sh """
+                                git pull origin main
+                                sed -i "s|image: ${DOCKER_IMAGE_BE}:.*|image: ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-prod|g" ${BE_PROD_PATH}
+                                sed -i "s|image: ${DOCKER_IMAGE_FE}:.*|image: ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-prod|g" ${FE_PROD_PATH}
+                                git add .
+                                git commit -m "Promote PROD: ${env.BASE_TAG} [skip ci]" || true
+                                git push origin main
+                            """
                         }
                     }
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            sh 'rm -rf temp_manifests'
-            cleanWs()
         }
     }
 }
