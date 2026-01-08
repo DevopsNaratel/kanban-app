@@ -5,7 +5,7 @@ pipeline {
         APP_NAME          = 'kanban-app'
         DOCKER_IMAGE_FE   = "devopsnaratel/${APP_NAME}-frontend"
         DOCKER_IMAGE_BE   = "devopsnaratel/${APP_NAME}-backend"
-        DOCKER_CREDS      = 'docker-cred' 
+        DOCKER_CREDS      = 'docker-hub' 
         GIT_CREDS         = 'git-token'   
         MANIFEST_REPO_URL = 'github.com/DevopsNaratel/deployment-manifests.git'
         
@@ -27,7 +27,7 @@ pipeline {
             }
         }
 
-        stage('Build & Push (DEV)') {
+        stage('Build & Push') {
             steps {
                 // Menggunakan credentials binding manual agar lebih stabil
                 withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDS}", passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
@@ -46,7 +46,7 @@ pipeline {
             }
         }
 
-        stage('Update Manifest (DEV)') {
+        stage('Update Manifest') {
             steps {
                 script {
                     sh 'rm -rf temp_manifests'
@@ -69,54 +69,3 @@ pipeline {
                 }
             }
         }
-
-        stage('Approval') {
-            steps {
-                input message: "Lanjut ke PROD?", ok: "Deploy!"
-            }
-        }
-
-        stage('Promote to PROD') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDS}", passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
-                    sh """
-                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        
-                        # Retag Backend
-                        docker pull ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-dev
-                        docker tag ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-dev ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-prod
-                        docker tag ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-dev ${DOCKER_IMAGE_BE}:latest
-                        docker push ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-prod
-                        docker push ${DOCKER_IMAGE_BE}:latest
-
-                        # Retag Frontend
-                        docker pull ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-dev
-                        docker tag ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-dev ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-prod
-                        docker tag ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-dev ${DOCKER_IMAGE_FE}:latest
-                        docker push ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-prod
-                        docker push ${DOCKER_IMAGE_FE}:latest
-                    """
-                }
-            }
-        }
-
-        stage('Update Manifest (PROD)') {
-            steps {
-                script {
-                    dir('temp_manifests') {
-                        withCredentials([usernamePassword(credentialsId: GIT_CREDS, usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-                            sh """
-                                git pull origin main
-                                sed -i "s|image: ${DOCKER_IMAGE_BE}:.*|image: ${DOCKER_IMAGE_BE}:${env.BASE_TAG}-prod|g" ${BE_PROD_PATH}
-                                sed -i "s|image: ${DOCKER_IMAGE_FE}:.*|image: ${DOCKER_IMAGE_FE}:${env.BASE_TAG}-prod|g" ${FE_PROD_PATH}
-                                git add .
-                                git commit -m "Promote PROD: ${env.BASE_TAG} [skip ci]" || true
-                                git push origin main
-                            """
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
