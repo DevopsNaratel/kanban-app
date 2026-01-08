@@ -29,7 +29,6 @@ pipeline {
 
         stage('Build & Push') {
             steps {
-                // Menggunakan credentials binding manual agar lebih stabil
                 withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDS}", passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
                     sh """
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
@@ -69,3 +68,5 @@ pipeline {
                 }
             }
         }
+    }
+} // <--- Kurung kurawal ini yang tadi hilang untuk menutup blok 'pipeline'
