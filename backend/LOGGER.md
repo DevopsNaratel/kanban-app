@@ -13,7 +13,7 @@ Setiap entri log harus berupa objek JSON satu baris dengan field berikut:
 | Field | Tipe | Deskripsi |
 | --- | --- | --- |
 | `timestamp` | ISO8601 | Waktu UTC saat log dibuat. |
-| `level` | String | **Wajib lowercase**: `info`, `warn`, `error`. |
+| `level` | String | `info`, `warn`, `error`. |
 | `message` | String | Deskripsi event. |
 | `path` | String | Endpoint API atau Komponen internal. |
 | `requestId` | UUID | Trace ID untuk tracking request. |
