@@ -31,7 +31,7 @@ Digunakan untuk mencatat traffic masuk. Pastikan `level` diisi `info`.
 {
   "timestamp": "2026-01-15T14:00:01.123Z",
   "level": "info",
-  "requestId": "a3b2-c4d5-e6f7",
+  "requestId": "afad4345dsfsef",
   "method": "POST",
   "path": "/api/v1/orders",
   "message": "Incoming request to create order",
@@ -53,7 +53,7 @@ Dashboard memiliki panel khusus untuk memantau performa query. Agar terbaca, And
 {
   "timestamp": "2026-01-15T14:05:10.456Z",
   "level": "info",
-  "requestId": "a3b2-c4d5-e6f7",
+  "requestId": "a3b2hnhw2dfer3rg",
   "method": "INTERNAL",
   "path": "Repository/OrderStore",
   "message": "Executed query",
@@ -83,7 +83,7 @@ Gunakan level ini untuk kejadian yang **tidak menghentikan sistem**, tetapi meme
 {
   "timestamp": "2026-01-15T14:10:00.123Z",
   "level": "warn",
-  "requestId": "w1-x2-y3",
+  "requestId": "fs3resfs4356uu6b",
   "method": "GET",
   "path": "/api/v1/checkout",
   "message": "Slow query detected",
@@ -106,7 +106,7 @@ Gunakan level ini untuk **kegagalan fatal** yang menyebabkan request gagal atau 
 {
   "timestamp": "2026-01-15T14:10:05.999Z",
   "level": "error",
-  "requestId": "e1-r2-r3",
+  "requestId": "675gfew2edssv",
   "method": "POST",
   "path": "/api/v1/payment",
   "message": "Payment Gateway Connection Refused",
