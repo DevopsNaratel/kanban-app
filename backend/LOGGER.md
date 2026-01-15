@@ -1,146 +1,122 @@
 ---
 
-# 📋 Standarisasi Logging JSON (Optimized)
+# 📋 Standarisasi Logging JSON (Grafana Optimized)
 
-Dokumentasi ini menetapkan standar log yang ringkas untuk **Grafana Loki**. Kita mengandalkan **Loki Labels** untuk metadata infrastruktur (`pod`, `service`, `namespace`) dan menggunakan **JSON Body** hanya untuk data transaksional.
+Dokumentasi ini adalah panduan bagi developer untuk menghasilkan log yang terstandarisasi. Standar ini dirancang agar log kita dapat diproses secara otomatis oleh **Loki** dan divisualisasikan secara akurat pada dashboard **Apps Activity Log**.
 
 ---
 
 ## 🏗️ 1. Core Fields (Wajib)
 
-Field ini harus ada di setiap entri log tanpa kecuali.
+Setiap entri log harus berupa objek JSON satu baris dengan field berikut:
 
-|*Field|Tipe|Deskripsi*|
-|---|---|---|
-|timestamp|ISO8601|Waktu internal aplikasi (UTC).|
-|level|String|info, warn, error.|
-|requestId|UUID|ID unik untuk melacak alur request.|
-|message|String|Deskripsi singkat aktivitas.|
-|method|String|HTTP Method atau INTERNAL / SYSTEM.|
-|path|String|Endpoint atau Nama Komponen/Worker.|
+| Field | Tipe | Deskripsi |
+| --- | --- | --- |
+| `timestamp` | ISO8601 | Waktu UTC saat log dibuat. |
+| `level` | String | **Wajib lowercase**: `info`, `warn`, `error`. |
+| `message` | String | Deskripsi event. |
+| `path` | String | Endpoint API atau Komponen internal. |
+| `requestId` | UUID | Trace ID untuk tracking request. |
+| `method` | String | `GET`, `POST`, atau `INTERNAL`. |
 
 ---
 
-## 🚀 2. Implementasi Kategori Log
+## 🚀 2. Implementasi & Contoh Log
 
-### A. Normal Event (attributes)
+### A. Logging Request (Info)
 
-Digunakan untuk HTTP Request (GET/POST/PUT/DELETE), Business Logic, Security, dan Background Jobs.
+Digunakan untuk mencatat traffic masuk. Pastikan `level` diisi `info`.
 
-*Contoh: POST Request (Payload) & Security*
-
-JSON
-
-
+```json
 {
-  "timestamp": "2026-01-05T08:30:10.123Z",
+  "timestamp": "2026-01-15T14:00:01.123Z",
   "level": "info",
-  "requestId": "9a1b2c3d-4e5f-6g7h-8i9j-0k1l2m3n4o5p",
+  "requestId": "a3b2-c4d5-e6f7",
   "method": "POST",
-  "path": "/api/products",
-  "message": "Create Product Success",
+  "path": "/api/v1/orders",
+  "message": "Incoming request to create order",
   "attributes": {
-    "payload": { "name": "Smartphone X", "price": 5000000 },
-    "user_email": "admin@store.com",
-    "ip_address": "192.168.1.1"
+    "user_id": 1024,
+    "source": "mobile-app"
   }
 }
 
+```
 
-*Contoh: GET Request (Query Params)*
+---
 
-JSON
+### B. Logging Query Database
 
+Dashboard memiliki panel khusus untuk memantau performa query. Agar terbaca, Anda **WAJIB** menggunakan pesan `"Executed query"`.
 
+```json
 {
-  "timestamp": "2026-01-05T08:31:00.456Z",
+  "timestamp": "2026-01-15T14:05:10.456Z",
   "level": "info",
-  "requestId": "1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p",
-  "method": "GET",
-  "path": "/api/products",
-  "message": "Get Product List",
-  "attributes": {
-    "queryParams": { "page": "1", "limit": "10" },
-    "userAgent": "Mozilla/5.0..."
-  }
-}
-
-
----
-
-### B. Error Event (error)
-
-Ditambahkan secara dinamis hanya saat level: error atau terjadi kegagalan sistem.
-
-*Contoh: Exception / Database Failure*
-
-JSON
-
-
-{
-  "timestamp": "2026-01-05T08:35:00.999Z",
-  "level": "error",
-  "requestId": "7b8c9d0e-1f2a-4b3c-8d9e-f0a1b2c3d4e5",
-  "method": "GET",
-  "path": "/api/users/profile",
-  "message": "Database connection timeout",
-  "error": {
-    "code": "DB_CONN_ERR_001",
-    "details": "Connection lost to postgres-db-01",
-    "stackTrace": "at Internal.Database.Connect()... line 45"
-  }
-}
-
-
----
-
-### C. Perf Event (metrics)
-
-Digunakan untuk mencatat latensi, penggunaan resource, atau efisiensi proses.
-
-*Contoh: Slow Query / Processing Time*
-
-JSON
-
-
-{
-  "timestamp": "2026-01-05T08:40:22.789Z",
-  "level": "warn",
-  "requestId": "3d4e5f6g-7h8i-4j9k-0l1m-2n3o4p5q6r7s",
+  "requestId": "a3b2-c4d5-e6f7",
   "method": "INTERNAL",
-  "path": "Database/QueryExecutor",
+  "path": "Repository/OrderStore",
+  "message": "Executed query",
+  "attributes": {
+    "query": "SELECT id FROM boards WHERE id = $1 AND user_id = $2",
+    "duration": 3,
+    "rows": 1
+  }
+}
+
+```
+
+---
+
+### C. Logging Error vs Warning (Level-Based)
+
+Anda harus membedakan penggunaan `level` berdasarkan keparahan kejadian.
+
+#### 1. Level: `warn` (Warning)
+
+Gunakan level ini untuk kejadian yang **tidak menghentikan sistem**, tetapi memerlukan perhatian (misal: performa melambat, validasi bisnis gagal, atau *threshold* hampir tercapai).
+
+* **Logic:** Gunakan saat terjadi *slow response* atau *retries*.
+* **Contoh Output:**
+
+```json
+{
+  "timestamp": "2026-01-15T14:10:00.123Z",
+  "level": "warn",
+  "requestId": "w1-x2-y3",
+  "method": "GET",
+  "path": "/api/v1/checkout",
   "message": "Slow query detected",
   "metrics": {
-    "executionTimeMs": 5200,
-    "memoryUsageMb": 128,
-    "rowCount": 50000,
+    "executionTimeMs": 1200,
     "thresholdMs": 1000
   }
 }
 
+```
 
----
+#### 2. Level: `error` (Error)
 
-## 🛠️ 3. Contoh Kasus Khusus (Background Job)
+Gunakan level ini untuk **kegagalan fatal** yang menyebabkan request gagal atau sistem berhenti berfungsi (misal: koneksi database terputus, 5xx status codes, atau *unhandled exceptions*).
 
-Menggunakan attributes untuk data proses di latar belakang.
+* **Logic:** Gunakan di dalam blok `catch` atau saat integrasi pihak ketiga mati total.
+* **Contoh Output:**
 
-JSON
-
-
+```json
 {
-  "timestamp": "2026-01-05T09:00:01.000Z",
-  "level": "info",
-  "requestId": "job-worker-8821",
-  "method": "INTERNAL",
-  "path": "Worker/EmailDispatcher",
-  "message": "Monthly Newsletter Sent",
-  "attributes": {
-    "job_id": "batch_99",
-    "recipient_count": 1500,
-    "status": "completed"
+  "timestamp": "2026-01-15T14:10:05.999Z",
+  "level": "error",
+  "requestId": "e1-r2-r3",
+  "method": "POST",
+  "path": "/api/v1/payment",
+  "message": "Payment Gateway Connection Refused",
+  "error": {
+    "code": "PG_503",
+    "details": "Downstream service unavailable",
+    "stack": "Error: Connect ETIMEDOUT 10.20.30.40:443"
   }
 }
 
+```
 
 ---
